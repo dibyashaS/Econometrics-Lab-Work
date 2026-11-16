@@ -1,0 +1,140 @@
+---
+title: "Lab1"
+output:
+  html_document:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(knitr)
+
+wage_df <- read_excel("C:/Users/dibya/Desktop/Econ 303/Age_HourlyEarnings.xlsx")
+
+age_df <- wage_df[, -1]
+ages <- as.numeric(age_df[1, ])
+joint <- age_df[-1, ]
+
+p_age <- colSums(joint)
+p_age <- p_age / sum(p_age)
+
+age_marginal_tbl <- data.frame(Age = ages, `P(Age)` = as.numeric(p_age))
+
+kable(age_marginal_tbl, digits = 5, caption = "Marginal distribution of Age")
+
+
+# Empirical Exercise E2.1
+
+## Part A:
+
+# Extract age columns
+age_cols <- wage_df[, grepl("^Age|^\\.\\.", names(wage_df))]
+
+# Compute marginal distribution of Age
+ages <- as.numeric(age_cols[1, ])
+age_probs <- colSums(age_cols[-1, ])
+age_marginal <- age_probs / sum(age_probs)
+
+# Display result
+data.frame(Age = ages, Probability = age_marginal)
+
+### b) Mean of AHE for each age value (computed + rendered as a table)
+
+```r
+```{r}
+ahe_vals <- as.numeric(wage_df[[1]][-1])
+joint_mat <- as.matrix(joint)
+
+E_AHE_given_Age <- colSums(joint_mat * ahe_vals) / as.numeric(p_age)
+
+cond_mean_tbl <- data.frame(Age = ages, `E(AHE | Age)` = E_AHE_given_Age)
+
+kable(cond_mean_tbl, digits = 4, caption = "Conditional mean of hourly earnings given age")
+
+
+
+## Part C:
+```r
+```{r fig.width=7, fig.height=4}
+plot(ages, E_AHE_given_Age,
+     pch = 19,
+     xlab = "Age",
+     ylab = "E[AHE | Age]",
+     main = "Mean AHE for each Age vs Age")
+lines(ages, E_AHE_given_Age)
+
+## Part D:
+```r
+
+Applying the Law of Iterated Expectations,
+\[
+E(AHE)=\sum_{a} E(AHE \mid \text{Age}=a)\,P(\text{Age}=a).
+\]
+
+Using the conditional means and the marginal distribution of Age from the spreadsheet,
+\[
+E(AHE)=21.5106.
+\]
+
+The average hourly wage in the population is ~\$21.51 from the dataset.
+
+## Part E:
+The variance of average hourly earnings is given by
+\[
+\mathrm{Var}(AHE)=E(AHE^2)-[E(AHE)]^2.
+\]
+
+\[
+\mathrm{Var}(AHE)=164.8203.
+\]
+
+The standard deviation of hourly earnings is:
+\[
+\sigma_{AHE}=\sqrt{164.8203}\approx 12.84.
+\]
+
+## Part F:
+The covariance between $AHE$ and Age is
+\[
+\mathrm{Cov}(AHE,\text{Age})=E(AHE\cdot \text{Age})-E(AHE)\,E(\text{Age}).
+\]
+
+From the marginal distribution of Age,
+\[
+E(\text{Age})=29.7663.
+\]
+
+\[
+\mathrm{Cov}(AHE,\text{Age})=5.7172.
+\]
+
+Since the covariance is positive, higher ages tend to be associated with higher hourly earnings.
+
+## Part G:
+The correlation between $AHE$ and Age is
+\[
+\mathrm{Corr}(AHE,\text{Age})
+=\frac{\mathrm{Cov}(AHE,\text{Age})}
+{\sqrt{\mathrm{Var}(AHE)}\sqrt{\mathrm{Var}(\text{Age})}}.
+\]
+
+From
+\[
+\mathrm{Var}(AHE)=164.8203, 
+\qquad 
+\mathrm{Var}(\text{Age})=8.1447,
+\]
+we get
+\[
+\mathrm{Corr}(AHE,\text{Age})
+=\frac{5.7172}{\sqrt{164.8203}\sqrt{8.1447}}
+\approx 0.156.
+\]
+
+
+## Part H:
+The covariance between age and average hourly earnings is positive, which helps us recognize through data that earnings tend to increase with age among workers aged 25–34. The correlation confirms a positive linear relationship between age and earnings. This relationship is visually supported by the upward-sloping pattern in the plot of conditional mean earnings versus age.

@@ -1,0 +1,104 @@
+---
+title: "Average Growth Rate Analysis for 65 Countries"
+output: html_document
+author: "Dibyasha Sharma"
+date: "2026-01-23"
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+
+Growth <- read_excel("C:/Users/dibya/Downloads/Growth.xlsx")
+
+knitr::opts_chunk$set(echo = FALSE)
+```
+## Part A:
+
+```{r}
+##Create a scatterplot
+
+plot(Growth$growth,Growth$tradeshare,
+  xlab="Trade Share",
+  ylab="Annual Growth Rate",
+  main="Scatterplot for Annual Growth Rate vs Trade Share (1960-1995)" )
+```
+
+There appears to be a weak relationship between Annual Growth rate and trade share. The scatterplot shows substantial dispersion as it does not contain clustered points, meaning:
+1) Correlation between our two variables is weak (possible outliers)
+2) Not possible to evaluate a definitive causal relationship as there is no strong positive linear relationship
+This means that, we cannot conclusively predict through share of trade alone that there is an increase in growth rate for the 65 countries.
+
+## Part B:
+
+```{r}
+##Plot the scatterplot
+
+plot(Growth$growth,Growth$tradeshare,
+  xlab="Trade Share",
+  ylab="Annual Growth Rate",
+  main="Scatterplot for Annual Growth Rate vs Trade Share (1960-1995)" )
+
+##Find Malta on the scatterplot and identify whether it is an outlier
+idx <- Growth$country_name == "Malta"
+
+##Mark Malta
+points(Growth$growth[idx],
+       Growth$tradeshare[idx],
+       col="red",pch=19,cex=1.5)
+```
+
+From visual inspection, we can see that Malta is an outlier as it deviates from the main cluster of points in the scatterplot.
+
+## Part C:
+
+```{r}
+model<-lm(growth~tradeshare, data = Growth)
+summary(model) #To find slope and intercept
+
+#To find trade share at 0.5 and 1.0
+predict(model, newdata = data.frame(tradeshare = c(0.5,1.0)))
+```
+From the calculations above, the predicted intercept is 0.6403, the estimated slope is 2.3604.For a country with a trade share of 0.5, the predicted growth rate is 1.793482 and for a country with a trade share of 1.0, the predicted growth rate is 2.96699. 
+
+## Part D:
+```{r}
+#Isolate the data from Malta
+filter_malta<-lm(growth~tradeshare,
+                 data = Growth,
+                 subset = country_name!= "Malta")
+summary(filter_malta)
+
+#To find trade share at 0.5 and 1.0
+predict(filter_malta, newdata = data.frame(tradeshare = c(0.5,1.0)))
+```
+When filtering out Malta, the estimated intercept is 0.9574, and the estimated slope is 1.6809.For a country with a trade share of 0.5, the predicted growth rate is 1.797863 and for a country with a trade share of 1.0, the predicted growth rate is 2.638315.      
+
+## Part E:
+
+```{r}
+plot(Growth$growth,Growth$tradeshare,
+  xlab="Trade Share",
+  ylab="Annual Growth Rate",
+  main="Regression functions (with vs without Malta)",
+  xlim = c(0,2.5),
+  ylim = c(0,3))
+
+#Regression line that includes Malta
+abline(model,col='blue',lwd=2)
+
+#Regression line excluding Malta
+abline(filter_malta,col="red",lwd=2)
+
+# Highlight Malta
+idx <- Growth$country_name == "Malta"
+points(Growth$tradeshare[idx], Growth$growth[idx],
+       col = "darkgreen", pch = 19, cex = 1.5)
+```
+
+The regression function that includes Malta is steeper than the one without Malta as the country has an unusually high trade share and a relatively high growth rate, which places it far to the right, away from the main cluster of observations in the scatterplot. 
+
+This results in a pull in the fitted regression line upward towards the right, which increases the estimated slope. When Malta is excluded, this leverage disappears and the regression is driven by the central cluster of the remaining countries, which results in a flatter slope.
+
+## Part F:
+
+Malta lies towards the far right in our scatterplot because it is a country located in the Mediterranean sea. This makes Malta visually isolated from our scatterplot. Its trade share is large because it participates in re-export and import activities at a high-volume, due to its favorable location and services-based economy.It is appropriate to include Malta in our analysis if the goal of a study is to analyze the causal relationship between growth and trade share. However, if the goal of a study is to analyze the relationship for typical countries, it is appropriate to exclude Malta as it is a high-leverage datapoint that strongly influences our estimated regression slope.

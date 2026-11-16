@@ -1,0 +1,70 @@
+---
+title: "Week 5 Lab"
+output: html_document
+date: "2026-02-06"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+birthweight_smoking<-read_excel("birthweight_smoking.xlsx")
+```
+Let us start by running 3 regressions:
+
+1) Birthweight on Smoker
+```{r}
+model_1<-lm(birthweight~smoker,data=birthweight_smoking)
+summary(model_1)
+```
+
+2) Birthweight on smoker, alcohol and Nprevist
+```{r}
+model_2<-lm(birthweight~smoker+alcohol+nprevist, data=birthweight_smoking)
+summary(model_2)
+```
+
+3) Birthweight on smoker, alcohol, nprevist and unmarried
+```{r}
+model_3<-lm(birthweight~smoker+alcohol+nprevist+unmarried, data=birthweight_smoking)
+summary(model_3)
+```
+
+## a) Value of the estimated effect of smoking in each of the regressions is as follows:
+
+For model_1,effect of smoking on birth weight=-253.23
+
+For model_2,effect of smoking on birth weight=-217.580
+
+For model_3, effect of smoking on birth weight=-175.377 
+
+## b)To generate a 95% confidence interval for the three regressions:
+```{r}
+confint(model_1)
+confint(model_2)
+confint(model_3)
+```
+
+## c) Does the coefficient on Smoker in regression (1) suffer from omitted variable bias?
+
+Yes, the coefficient on smoker in regression (1) suffers from omitted variable bias because:
+1) The variable smoker affects birth weight (determinant of Y)
+2) It correlates wih other omitted variables (alcohol use and prenatal visits).
+
+As a result, the zero conditional mean assumption will be violated, leading to omitted variable bias.
+
+## d) Does the coefficient on Smoker in regression (2) suffer from omitted variable bias?
+Regression (2) may still suffer from omitted variable bias, but it will be less prominent than that for regression (1). This is because, regression (2) controls for alcohol, although it doesn't control for prenatal visits, which would still lead to biasness.Because these variables are omitted, the zero conditional mean assumption is violated, resulting in biasness.
+
+## e)  
+
+i) The value of the confidence interval for the coefficient on the "unmarried" variable will be (-238.13,-136.14).
+
+ii) Yes, the coefficient for the "unmarried" variable, which is equal to -187.133 in regression 3, is statistically significant at the 5% level because ithe confidence interval is not equal to 0.
+
+iii) Yes, the magnitude of the coefficient is large as it implies that babies born to unmarried mothers weight about 187.13 lb less than average,holding all other factors constant.
+
+iv) Although the magnitude for the unmarried variable is large in our dataset, we do not have enough evidence to conclude causality from this information alone.Therefore, I do not fully agree that marriage, on average, will lead to healthier babies.I do not agree with the advocacy group’s conclusion. This is because there may have been a range of unobserved factors like income, education, age,and social support which could have affected birth outcomes between married and unmarried mothers.
+
+
+##  f) 
+
+The other control variables that I believe can be accounted for would be education and age. A reasonable 95% confidence interval for the CI will be between [-228.51092 and -122.24290] grams.

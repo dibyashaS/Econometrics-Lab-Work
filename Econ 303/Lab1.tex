@@ -1,0 +1,199 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Lab1},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Lab1}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+\section{Empirical Exercise E2.1}\label{empirical-exercise-e2.1}
+
+\subsection{Part A:}\label{part-a}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{cc}
+\hline
+Age & $P(\text{Age})$ \\
+\hline
+25 & 0.08489 \\
+26 & 0.09223 \\
+27 & 0.08547 \\
+28 & 0.09339 \\
+29 & 0.10350 \\
+30 & 0.10473 \\
+31 & 0.10393 \\
+32 & 0.10807 \\
+33 & 0.10880 \\
+34 & 0.11498 \\
+\hline
+\end{tabular}
+\caption{Marginal distribution of Age}
+\end{table}
+
+\subsection{Part B:}\label{part-b}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{cc}
+\hline
+Age & $E(AHE \mid \text{Age})$ \\
+\hline
+25 & 17.5908 \\
+26 & 18.9669 \\
+27 & 19.7049 \\
+28 & 20.2358 \\
+29 & 21.1714 \\
+30 & 21.7849 \\
+31 & 22.5951 \\
+32 & 23.6920 \\
+33 & 23.3487 \\
+34 & 24.1081 \\
+\hline
+\end{tabular}
+\caption{Conditional mean of hourly earnings given age}
+\end{table}
+
+\subsection{Part C:}\label{part-c}
+
+\subsection{\texorpdfstring{\protect\includegraphics{Mean AHE for each Age vs. Age.png}}{}}\label{section}
+
+\subsection{Part D:}\label{part-d}
+
+Applying the Law of Iterated Expectations, \[
+E(AHE)=\sum_{a} E(AHE \mid \text{Age}=a)\,P(\text{Age}=a).
+\]
+
+Using the conditional means and the marginal distribution of Age from
+the spreadsheet, \[
+E(AHE)=21.5106.
+\]
+
+The average hourly wage in the population is \textasciitilde\$21.51 from
+the dataset.
+
+\subsection{Part E:}\label{part-e}
+
+The variance of average hourly earnings is given by \[
+\mathrm{Var}(AHE)=E(AHE^2)-[E(AHE)]^2.
+\]
+
+\[
+\mathrm{Var}(AHE)=164.8203.
+\]
+
+The standard deviation of hourly earnings is: \[
+\sigma_{AHE}=\sqrt{164.8203}\approx 12.84.
+\]
+
+\subsection{Part F:}\label{part-f}
+
+The covariance between \(AHE\) and Age is \[
+\mathrm{Cov}(AHE,\text{Age})=E(AHE\cdot \text{Age})-E(AHE)\,E(\text{Age}).
+\]
+
+From the marginal distribution of Age, \[
+E(\text{Age})=29.7663.
+\]
+
+\[
+\mathrm{Cov}(AHE,\text{Age})=5.7172.
+\]
+
+Since the covariance is positive, higher ages tend to be associated with
+higher hourly earnings.
+
+\subsection{Part G:}\label{part-g}
+
+The correlation between \(AHE\) and Age is \[
+\mathrm{Corr}(AHE,\text{Age})
+=\frac{\mathrm{Cov}(AHE,\text{Age})}
+{\sqrt{\mathrm{Var}(AHE)}\sqrt{\mathrm{Var}(\text{Age})}}.
+\]
+
+From \[
+\mathrm{Var}(AHE)=164.8203, 
+\qquad 
+\mathrm{Var}(\text{Age})=8.1447,
+\] we get \[
+\mathrm{Corr}(AHE,\text{Age})
+=\frac{5.7172}{\sqrt{164.8203}\sqrt{8.1447}}
+\approx 0.156.
+\]
+
+\subsection{Part H:}\label{part-h}
+
+The covariance between age and average hourly earnings is positive,
+which helps us recognize through data that earnings tend to increase
+with age among workers aged 25--34. The correlation confirms a positive
+linear relationship between age and earnings. This relationship is
+visually supported by the upward-sloping pattern in the plot of
+conditional mean earnings versus age.
+
+\end{document}

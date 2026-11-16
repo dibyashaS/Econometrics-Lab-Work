@@ -1,0 +1,590 @@
+---
+title: "Project"
+output: html_document
+date: "2026-02-25"
+---
+```{r setup, include=FALSE}
+library(haven)
+library(dplyr)
+library(kableExtra)
+library(pandoc)
+library(modelsummary)
+library(stargazer)
+library(fixest)
+library(knitr)
+knitr::opts_knit$set(root.dir="C:/Users/dibya/Desktop/Econ 303/Project")
+```
+FOR nlsspanel2->Variable 1: Household roster and occupation
+```{r}
+Z01C<-read_dta("nlss2panel/Z01C.dta") #Activities
+Z01A<-read_dta("nlss2panel/Z01A.dta") #Household roster
+Z07B<-read_dta("nlss2panel/Z07B.dta") #Education
+```
+Rename the 'IDC' column to merge
+```{r}
+names(Z01C)[names(Z01C)=="V01C_IDC"] <- "IDC"
+```
+Merge household roster(sex,age,marital status, urban/rural) and occupation 
+```{r}
+merged_df<-merge(Z01A, Z01C,
+                       by=c("WWW","HH","IDC"),all.x=TRUE)
+dim(Z01C)
+dim(Z01A)
+dim(merged_df)
+```
+To find model values
+```{r}
+summary(Z01C)
+summary(Z01A)
+summary(Z07B)
+```
+Collapse to one row per person for regression
+```{r}
+key<-paste(merged_df$WWW, merged_df$HH, merged_df$IDC, sep="_")
+merged_one<-merged_df[!duplicated(key), ]
+dim(Z01A)
+dim(merged_one)
+```
+Merge education
+```{r}
+Z07B_keep<-Z07B[,c("WWW","HH","IDC","V07B_02")]
+merged_one <- merge(merged_one, Z07B_keep,
+                    by=c("WWW","HH","IDC"),
+                    all.x=TRUE)
+table(merged_one$V07B_02,useNA="ifany")
+```
+Create a dummy variable for 'female'
+```{r}
+table(merged_one$V01A_02,useNA="ifany")
+
+#Create a female dummy(female=1)
+merged_one$female<-ifelse(merged_one$V01A_02==2,1,0)
+
+#Check it
+table(merged_one$female, useNA="ifany")
+```
+Next,let's compute labor outcomes
+```{r}
+#Creating a variable for calculating labor intensity
+merged_one$days_month<-merged_one$V01C_03
+merged_one$hours_day<-merged_one$V01C_04
+
+merged_one$hours_month<-merged_one$days_month*merged_one$hours_day
+
+#After calculation, let us summarize the findings
+summary(merged_one$hours_month)
+hist(merged_one$hours_month,main="Monthly hours worked",
+     xlab="Hours Per Month")
+```
+Create a dummy of worked variable
+```{r}
+merged_one$worked_any<-ifelse(!is.na(merged_one$hours_month)&
+merged_one$hours_month>0,1,0)
+table(merged_one$worked_any)
+```
+Variable: Internet access
+```{r}
+Z02C2<-read_dta("nlss2panel/Z02C2.dta")#Internet access
+table(Z02C2$V02C2_11F,useNA="ifany")
+table(Z02C2$V02C2_11B,useNA="ifany" )
+```
+Creating ICT (Internet and mobile) dummies and merging
+```{r}
+Z02C2$internet<-ifelse(Z02C2$V02C2_11F==1,1,0)
+Z02C2$mobile<-ifelse(Z02C2$V02C2_11B==1,1,0)
+
+#Creating combined ICT(Internet or mobile)
+Z02C2$ict <- ifelse(Z02C2$internet==1|Z02C2$mobile==1,1,0)
+
+#Avoiding duplicates
+Z02C2_keep<-Z02C2[,c("WWW","HH","ict")]
+
+#Merge into merged one
+merged_one<-merge(merged_one,Z02C2_keep,
+                  by=c("WWW","HH"),
+                  all.x=TRUE)
+#Households not found
+merged_one$ict[is.na(merged_one$ict)]<-0
+```
+Saving the processed dataset
+```{r}
+saveRDS(merged_one, file="processed_merged_one.rds")
+write.csv(merged_one,file="processed_merged_one.csv",row.names=FALSE)
+```
+Performing regression
+```{r}
+model<-lm(worked_any~ict*female, data=merged_one)
+summary(model)
+table(merged_one$ict) #For individual level
+```
+Mean and variance of hours worked
+```{r}
+mean(merged_one$worked_any, na.rm=TRUE)
+var(merged_one$worked_any, na.rm=TRUE)
+```
+Mean and variance of ict
+```{r}
+mean(merged_one$ict,na.rm=TRUE)
+var(merged_one$ict,na.rm=TRUE)
+```
+Mean and variance of hrs/month
+```{r}
+mean(merged_one$hours_month,na.rm=TRUE)
+var(merged_one$hours_month,na.rm=TRUE)
+```
+T-test
+```{r}
+t.test(worked_any~ict,data=merged_one)
+```
+Correlation and covariance
+```{r}
+numeric_vars<-merged_one[,c("worked_any","ict","female","hours_month")]
+
+#Correlation matrix
+cor(numeric_vars,use="complete.obs")
+
+#Covariance matrix
+cov(numeric_vars,use="complete.obs")
+```
+Scatterplot
+```{r}
+plot(merged_one$ict,
+     merged_one$hours_month,
+     xlab="ICT",
+     ylab="Monthly Hours",
+     main="Monthly hours vs ICT")
+```
+
+#Adding more controls and Specification
+```{r}
+#Age+Age^2
+merged_one$age<-merged_one$V01A_05
+merged_one$age2<-merged_one$age^2
+
+#Marital status as factor
+merged_one$marital<-factor(merged_one$V01A_06)
+
+#Urban / Rural as factor
+merged_one$urban<-factor(merged_one$V01A_04B)
+
+merged_one$educ<-factor(merged_one$V07B_02)
+```
+
+Run regression with controls
+```{r}
+model2<-lm(worked_any~ict*female 
+             +age+age2 
+             +marital 
+             +urban
+             +educ,
+             data=merged_one)
+summary(model2)
+```
+
+Transformation
+```{r}
+merged_one$log_hours<-log(merged_one$hours_month+1)
+hist(merged_one$log_hours,
+     main="Monthly Hours in Log",
+     xlab="Log Hours")
+```
+
+```{r}
+table(merged_one$WWW)
+```
+For the context of nlsspanel2 data, The coefficient on ict is small and statistically insignificant, suggesting that ICT access alone does not significantly affect the probability of working. However, the interaction term between ict and female is negative, suggesting heterogeneous effects by gender, though not statistically significant
+-----------------------------------------------------------------------
+                        nlss1panel
+-----------------------------------------------------------------------
+```{r}
+Z01A_1 <- read_dta("nlss1panel/Z01A.dta")
+Z01C_1 <- read_dta("nlss1panel/Z01C.dta")
+Z07B_1 <- read_dta("nlss1panel/Z07B.dta")
+Z02C2_1 <- read_dta("nlss1panel/Z02C2.dta")
+
+names(Z01C_1)[names(Z01C_1) == "V01C_IDC"] <- "IDC"
+
+# Start from person-level roster
+merged_one_1 <- Z01A_1
+
+# Education
+Z07B_1_keep <- Z07B_1[, c("WWW","HH","IDC","V07B_02")]
+merged_one_1 <- merge(
+  merged_one_1, Z07B_1_keep,
+  by = c("WWW","HH","IDC"),
+  all.x = TRUE
+)
+
+# Female
+merged_one_1$female <- ifelse(merged_one_1$V01A_02 == 2, 1, 0)
+
+# Labor outcome from total weekly hours in Z01C_1
+labor1 <- Z01C_1 %>%
+  select(WWW, HH, IDC, V01C_06T) %>%
+  mutate(
+    hours_worked = ifelse(is.na(V01C_06T), 0, V01C_06T),
+    worked_any = ifelse(!is.na(V01C_06T) & V01C_06T > 0, 1, 0)
+  ) %>%
+  group_by(WWW, HH, IDC) %>%
+  summarise(
+    hours_worked = sum(hours_worked, na.rm = TRUE),
+    worked_any = as.numeric(any(worked_any == 1, na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+merged_one_1 <- merge(
+  merged_one_1, labor1,
+  by = c("WWW","HH","IDC"),
+  all.x = TRUE
+)
+
+merged_one_1$hours_worked[is.na(merged_one_1$hours_worked)] <- 0
+merged_one_1$worked_any[is.na(merged_one_1$worked_any)] <- 0
+
+# ICT
+Z02C2_1$internet <- ifelse(Z02C2_1$V02C2_11F == 1, 1, 0)
+Z02C2_1$mobile   <- ifelse(Z02C2_1$V02C2_11B == 1, 1, 0)
+Z02C2_1$ict      <- ifelse(Z02C2_1$internet == 1 | Z02C2_1$mobile == 1, 1, 0)
+
+Z02C2_1_keep <- Z02C2_1[, c("WWW","HH","ict")] %>% distinct()
+merged_one_1 <- merge(
+  merged_one_1, Z02C2_1_keep,
+  by = c("WWW","HH"),
+  all.x = TRUE
+)
+merged_one_1$ict[is.na(merged_one_1$ict)] <- 0
+
+# Controls
+merged_one_1$age     <- merged_one_1$V01A_05
+merged_one_1$age2    <- merged_one_1$age^2
+merged_one_1$marital <- factor(merged_one_1$V01A_06)
+merged_one_1$urban   <- factor(merged_one_1$V01A_04B)
+merged_one_1$educ    <- factor(merged_one_1$V07B_02)
+
+# Panel identifiers
+panel1 <- merged_one_1
+panel1$wave <- 1
+panel1$pid  <- paste(panel1$WWW, panel1$HH, panel1$IDC, sep = "_")
+
+```
+
+```{r}
+# Panel 2 from NLSS2 baseline dataset
+panel2 <- merged_one
+panel2$wave <- 2
+panel2$pid  <- paste(panel2$WWW, panel2$HH, panel2$IDC, sep = "_")
+```
+-----------------------------------------------------------------------
+                        nlss3panel
+-----------------------------------------------------------------------
+
+```{r}
+summary_stats <- data.frame(
+  variable = c("worked_any","ict","female","hours_month","age"),
+  mean = c(
+    mean(merged_one$worked_any, na.rm=TRUE),
+    mean(merged_one$ict, na.rm=TRUE),
+    mean(merged_one$female, na.rm=TRUE),
+    mean(merged_one$hours_month, na.rm=TRUE),
+    mean(merged_one$age, na.rm=TRUE)
+  ),
+  sd = c(
+    sd(merged_one$worked_any, na.rm=TRUE),
+    sd(merged_one$ict, na.rm=TRUE),
+    sd(merged_one$female, na.rm=TRUE),
+    sd(merged_one$hours_month, na.rm=TRUE),
+    sd(merged_one$age, na.rm=TRUE)
+  )
+)
+
+summary_stats
+```
+
+```{r}
+max(merged_one$age, na.rm = TRUE)
+```
+
+
+Correction for DiD
+```{r}
+# =========================
+# NLSS3: use Section 11
+# =========================
+
+# Roster
+Z01A_3 <- read_dta("nlss3panel/xH01_S01.dta")
+
+# ICT
+Z02C2_3 <- read_dta("nlss3panel/xH02_S02.dta")
+
+# Education
+Z07B_3 <- read_dta("nlss3panel/xH07_S06B.dta")
+
+# Labor / hours worked (PERSON-LEVEL)
+Z11_3 <- read_dta("nlss3panel/xH18_S11.dta")
+
+# -------------------------
+# Rename IDs to match
+# -------------------------
+names(Z01A_3)[names(Z01A_3) == "v01_idc"] <- "IDC"
+names(Z07B_3)[names(Z07B_3) == "v06b_idc"] <- "IDC"
+names(Z11_3)[names(Z11_3) == "v11_idc"] <- "IDC"
+
+# -------------------------
+# Build labor outcomes from S11
+# -------------------------
+labor3 <- Z11_3 %>%
+  select(www, hh, IDC, v11_01) %>%
+  mutate(
+    hours_worked = ifelse(is.na(v11_01), 0, v11_01),
+    worked_any = ifelse(!is.na(v11_01) & v11_01 > 0, 1, 0)
+  )
+
+# -------------------------
+# Build ICT from Section 2
+# -------------------------
+Z02C2_3$internet <- ifelse(Z02C2_3$v02_31d == 1, 1, 0)
+Z02C2_3$mobile   <- ifelse(Z02C2_3$v02_31b == 1, 1, 0)
+Z02C2_3$ict      <- ifelse(Z02C2_3$internet == 1 | Z02C2_3$mobile == 1, 1, 0)
+
+ict3 <- Z02C2_3 %>%
+  select(www, hh, ict) %>%
+  distinct()
+
+# -------------------------
+# Education
+# -------------------------
+educ3 <- Z07B_3 %>%
+  select(www, hh, IDC, v06_04)
+
+# -------------------------
+# Merge panel 3 person-level data
+# -------------------------
+panel3 <- Z01A_3 %>%
+  left_join(labor3, by = c("www", "hh", "IDC")) %>%
+  left_join(educ3,  by = c("www", "hh", "IDC")) %>%
+  left_join(ict3,   by = c("www", "hh"))
+
+# Replace missing values
+panel3$ict[is.na(panel3$ict)] <- 0
+panel3$worked_any[is.na(panel3$worked_any)] <- 0
+panel3$hours_worked[is.na(panel3$hours_worked)] <- 0
+
+# Controls
+panel3$female  <- ifelse(panel3$v01_02 == 2, 1, 0)
+panel3$urban   <- factor(panel3$v01_04)
+panel3$educ    <- factor(panel3$v06_04)
+panel3$age     <- panel3$v01_05a
+panel3$age2    <- panel3$age^2
+panel3$marital <- factor(panel3$v01_06)
+
+# Standardize names for combining
+panel3$wave <- 3
+panel3$pid  <- paste(panel3$www, panel3$hh, panel3$IDC, sep = "_")
+names(panel3)[names(panel3) == "www"] <- "WWW"
+names(panel3)[names(panel3) == "hh"]  <- "HH"
+
+# Quick checks
+table(panel3$worked_any, useNA = "ifany")
+summary(panel3$hours_worked)
+```
+
+```{r}
+# =========================
+# Rebuild panel_all
+# =========================
+
+# Make sure panel1 and panel2 already exist
+# and that they have these variables:
+# WWW, HH, IDC, pid, wave, worked_any, ict, female, age, age2, marital, urban, educ
+
+common_vars <- c(
+  "WWW","HH","IDC","pid","wave",
+  "worked_any","ict","female","age","age2","marital","urban","educ"
+)
+
+panel1_small <- panel1[, common_vars]
+panel2_small <- panel2[, common_vars]
+panel3_small <- panel3[, common_vars]
+
+panel_all <- rbind(panel1_small, panel2_small, panel3_small)
+
+# Check worked_any by wave
+panel_all %>%
+  group_by(wave) %>%
+  summarise(
+    n = n(),
+    mean_worked = mean(worked_any, na.rm = TRUE),
+    ict_rate = mean(ict, na.rm = TRUE)
+  )
+```
+
+```{r}
+# =========================
+# DiD setup
+# =========================
+
+panel_all$post <- ifelse(panel_all$wave >= 2, 1, 0)
+panel_all$did  <- panel_all$ict * panel_all$post
+
+model_df <- panel_all[, c("pid","wave","worked_any","did","age","age2","marital","urban","educ")]
+model_df <- na.omit(model_df)
+
+summary(model_df$worked_any)
+table(is.finite(model_df$worked_any), useNA = "ifany")
+
+# Pooled OLS DiD
+m1 <- lm(
+  worked_any ~ did + age + age2 + marital + urban + educ,
+  data = model_df
+)
+summary(m1)
+
+# Wave fixed effects
+m2 <- feols(
+  worked_any ~ did + age + age2 + marital + urban + educ | wave,
+  data = model_df,
+  cluster = ~pid
+)
+summary(m2)
+
+# Individual + wave FE on balanced sample
+pid_counts <- table(model_df$pid)
+model_df_bal <- model_df[model_df$pid %in% names(pid_counts[pid_counts >= 2]), ]
+
+m3 <- feols(
+  worked_any ~ did + age + age2 + marital + urban + educ | pid + wave,
+  data = model_df_bal,
+  cluster = ~pid
+)
+summary(m3)
+```
+
+```{r}
+# =========================
+# DiD trend graph
+# =========================
+png("did_trend_graph.png", width = 1200, height = 800)
+plot_data <- panel_all %>%
+  filter(female == 1) %>%
+  group_by(wave, ict) %>%
+  summarise(
+    emp_rate = mean(worked_any, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  ) 
+
+plot(emp_rate ~ wave, data = subset(plot_data, ict == 1),
+     type = "b", pch = 16, ylim = c(0,1),
+     xlab = "Wave", ylab = "Employment Rate",
+     main = "Female Employment trends by ICT status")
+
+lines(emp_rate ~ wave, data = subset(plot_data, ict == 0),
+      type = "b", pch = 17)
+
+legend("topright", legend = c("ICT = 1", "ICT = 0"), pch = c(16,17), lty = 1)
+abline(v = 1.5, lty = 2)
+dev.off()
+```
+
+```{r}
+panel_all %>%
+  group_by(wave) %>%
+  summarise(
+    n = n(),
+    mean_worked = mean(worked_any, na.rm = TRUE),
+    ict_rate = mean(ict, na.rm = TRUE)
+  )
+
+panel1 %>%
+  summarise(
+    n = n(),
+    nonmissing_hours = sum(!is.na(hours_worked)),
+    mean_worked = mean(worked_any, na.rm = TRUE)
+  )
+
+panel2 %>%
+  summarise(
+    n = n(),
+    nonmissing_hours = sum(!is.na(hours_month)),
+    mean_worked = mean(worked_any, na.rm = TRUE)
+  )
+
+panel3 %>%
+  summarise(
+    n = n(),
+    nonmissing_hours = sum(!is.na(hours_worked)),
+    mean_worked = mean(worked_any, na.rm = TRUE)
+  )
+```
+
+Regression Table
+```{r}
+summary_stats <- data.frame(
+  Variable = c("worked_any", "ict", "female", "hours_month", "age"),
+  Mean = c(
+    mean(merged_one$worked_any, na.rm = TRUE),
+    mean(merged_one$ict, na.rm = TRUE),
+    mean(merged_one$female, na.rm = TRUE),
+    mean(merged_one$hours_month, na.rm = TRUE),
+    mean(merged_one$age, na.rm = TRUE)
+  ),
+  SD = c(
+    sd(merged_one$worked_any, na.rm = TRUE),
+    sd(merged_one$ict, na.rm = TRUE),
+    sd(merged_one$female, na.rm = TRUE),
+    sd(merged_one$hours_month, na.rm = TRUE),
+    sd(merged_one$age, na.rm = TRUE)
+  ),
+  Min = c(
+    min(merged_one$worked_any, na.rm = TRUE),
+    min(merged_one$ict, na.rm = TRUE),
+    min(merged_one$female, na.rm = TRUE),
+    min(merged_one$hours_month, na.rm = TRUE),
+    min(merged_one$age, na.rm = TRUE)
+  ),
+  Max = c(
+    max(merged_one$worked_any, na.rm = TRUE),
+    max(merged_one$ict, na.rm = TRUE),
+    max(merged_one$female, na.rm = TRUE),
+    max(merged_one$hours_month, na.rm = TRUE),
+    max(merged_one$age, na.rm = TRUE)
+  ),
+  N = c(
+    sum(!is.na(merged_one$worked_any)),
+    sum(!is.na(merged_one$ict)),
+    sum(!is.na(merged_one$female)),
+    sum(!is.na(merged_one$hours_month)),
+    sum(!is.na(merged_one$age))
+  )
+)
+kable(summary_stats, digits = 3, caption = "Summary Statistics")
+```
+Summary for Findings
+```{r}
+modelsummary(
+  list(
+    "Wave FE" = m2,
+    "Individual + Wave FE" = m3
+  ),
+  stars=TRUE,
+  output="kableExtra"
+)
+```
+Table to cleanly display output
+```{r}
+modelsummary(
+  list(
+    "Wave FE" = m2,
+    "Individual + Wave FE" = m3
+  ),
+  stars = TRUE,
+  escape = FALSE,
+  coef_map = c(
+    "did" = "ICT Access×Post",
+    "age" = "Age",
+    "age2" = "Age²"
+  ),
+  output = "kableExtra"
+)
+```

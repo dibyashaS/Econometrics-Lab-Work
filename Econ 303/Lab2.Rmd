@@ -1,0 +1,198 @@
+---
+title: "Econometrics Week 2 Lab"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(knitr)
+library(readxl)
+
+CPS96_15 <- read_excel("CPS96_15.xlsx")
+
+knitr::opts_chunk$set(echo=FALSE)
+```
+Lab 2 Questions:
+
+Part A:
+
+a) Sample mean for AHE in 1996 and 2015
+
+```{r}
+ahe_1996 <- CPS96_15$ahe[CPS96_15$year == 1996]
+ahe_2015 <- CPS96_15$ahe[CPS96_15$year == 2015]
+
+mean(ahe_1996, na.rm = TRUE)
+mean(ahe_2015, na.rm = TRUE)
+```
+b) Sample Standard deviation for 1996 and 2015
+```{r}
+sd(ahe_1996, na.rm = TRUE)
+sd(ahe_2015, na.rm = TRUE)
+```
+c)  Calculate a 95% confidence interval for AHE in 1996 and 2015
+```{r}
+t.test(ahe_1996)$conf.int
+t.test(ahe_2015)$conf.int
+```
+d) Calculate a change in mean for AHE from 1996 to 2015
+```{r}
+t.test(ahe_2015, ahe_1996)$conf.int
+```
+Part B:
+```{r}
+CPI_2015 <- 237.0
+CPI_1996 <- 156.9
+
+inflator <- CPI_2015 / CPI_1996
+inflator
+
+ahe_1996_real <- CPS96_15 %>%
+  filter(year == 1996) %>%
+  mutate(ahe_real = ahe * inflator) %>%
+  pull(ahe_real)
+
+ahe_2015_real <- CPS96_15 %>%
+  filter(year == 2015) %>%
+  pull(ahe)
+```
+a)  Sample mean of AHE
+```{r}
+mean(ahe_1996_real, na.rm = TRUE)
+mean(ahe_2015_real, na.rm = TRUE)
+```
+b)  Standard deviation of AHE
+```{r}
+sd(ahe_1996_real,na.rm=TRUE)
+sd(ahe_2015_real,na.rm = TRUE)
+```
+c)  95% Confidence Intervals for population mean AHE
+```{r}
+t.test(ahe_1996_real)$conf.int
+t.test(ahe_2015_real)$conf.int
+```
+d)  95% Confidence Interval for change in real AHE(1996-2015)
+```{r}
+t.test(ahe_2015_real,ahe_1996_real)$conf.int
+```
+Part C:
+If I were interested in changes in workers’ purchasing power, I would use the results from Part (b), which adjusts wages for inflation using the CPI. Nominal wages in Part (a) do not account for changes in prices over time, so they cannot accurately measure purchasing power.
+
+Part D:
+Construct 95% interval, filter by 2015 and high school
+```{r}
+d15 <- CPS96_15 %>% filter(year == 2015)
+
+ahe15_hs  <- d15 %>% filter(bachelor == 0) %>% pull(ahe)
+ahe15_col <- d15 %>% filter(bachelor == 1) %>% pull(ahe)
+
+# (i) 95% CI mean AHE, HS grads (2015)
+ci15_hs <- t.test(ahe15_hs)$conf.int
+
+# (ii) 95% CI mean AHE, college grads (2015)
+ci15_col <- t.test(ahe15_col)$conf.int
+
+# (iii) 95% CI difference in means (college-HS), 2015
+diff15 <- t.test(ahe15_col, ahe15_hs)$conf.int
+
+rbind(
+  CI_mean_2015_HS = ci15_hs,
+  CI_mean_2015_College = ci15_col,
+  CI_diff_2015_College_minus_HS = diff15
+)
+```
+Part E: Repeat (d) using the 1996 data expressed in 2015.
+```{r}
+CPI_2015 <- 237.0
+CPI_1996 <- 156.9
+inflator <- CPI_2015 / CPI_1996
+
+d96_real <- CPS96_15 %>%
+  filter(year == 1996) %>%
+  mutate(ahe_real2015 = ahe * inflator)
+
+ahe96_hs_real<- d96_real %>% filter(bachelor==0) %>% pull(ahe_real2015)
+ahe96_col_real <- d96_real %>% filter(bachelor==1) %>% pull(ahe_real2015)
+
+# 95% CI mean AHE, HS grads (1996 in 2015$)
+ci96_hs <- t.test(ahe96_hs_real)$conf.int
+
+# 95% CI mean AHE, college grads (1996 in 2015$)
+ci96_col <- t.test(ahe96_col_real)$conf.int
+
+# 95% CI difference (college - HS), 1996 in 2015$
+diff96 <- t.test(ahe96_col_real, ahe96_hs_real)$conf.int
+
+rbind(
+  CI_mean_1996real_HS = ci96_hs,
+  CI_mean_1996real_College = ci96_col,
+  CI_diff_1996real_College_minus_HS = diff96
+)
+```
+Part F: Using appropriate estimates, confidence interval,and test statistics, answer the following:
+```{r}
+tt_hs <- t.test(ahe15_hs, ahe96_hs_real)  
+tt_hs$estimate
+tt_hs$conf.int
+tt_hs$p.value
+
+#ii) Did real college wages increase?
+tt_col <- t.test(ahe15_col, ahe96_col_real)
+tt_col$estimate
+tt_col$conf.int
+tt_col$p.value
+
+#iii) Did the college - HS gap increase? (real 2015$)
+
+#Create one dataset with real wages for both years
+CPS_real <- CPS96_15 %>%
+  mutate(
+    year2015 = ifelse(year==2015,1,0),
+    ahe_real2015 = ifelse(year==1996, ahe*inflator, ahe)
+  )
+
+# Regression with interaction: tests whether the gap changed over time
+gap_model <- lm(ahe_real2015 ~ bachelor + year2015 + bachelor:year2015, data = CPS_real)
+summary(gap_model)
+```
+The 95% CI for the change in real wages (2015 − 1996) for high school graduates is [-0.272, 0.498]. Because 0 is inside the interval (p = 0.565), we do not have evidence that real wages for high school graduates increased from 1996 to 2015.
+
+The 95% CI for the change in real wages (2015−1996) for college graduates is [1.993, 3.161]. Because 0 is not inside the interval (p < 0.001), real wages for college graduates did increase.
+
+The interaction term bachelor:year2015 is positive, 2.464 and statistically significant, so the earnings gap between college and high school graduates increased from 1996 to 2015 (by about $2.46/hr in 2015 dollars).
+
+Part G: Gender gap table
+```{r}
+CPS_real <- CPS96_15 %>%
+  mutate(
+    ahe_real2015 = ifelse(year == 1996, ahe * inflator, ahe)
+  )
+
+hs <- CPS_real %>% filter(bachelor == 0)
+
+# Mean AHE by year and gender (HS only)
+hs_gender <- hs %>%
+  group_by(year, female) %>%
+  summarize(
+    n=sum(!is.na(ahe_real2015)),
+    mean=mean(ahe_real2015, na.rm=TRUE),
+    sd=sd(ahe_real2015, na.rm=TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(gender = ifelse(female==1, "Female", "Male")) %>%
+  select(year, gender, n, mean, sd) %>%
+  arrange(year, gender)
+
+kable(hs_gender, digits = 3)
+
+hs_gap <- hs %>%
+  group_by(year) %>%
+  summarize(
+    mean_male = mean(ahe_real2015[female==0],na.rm=TRUE),
+    mean_female = mean(ahe_real2015[female==1],na.rm=TRUE),
+    gender_gap = mean_male-mean_female,
+    .groups = "drop"
+  )
+
+kable(hs_gap,digits=3)
+```

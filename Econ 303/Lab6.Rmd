@@ -1,0 +1,38 @@
+---
+title: "Lab6"
+output: html_document
+date: "2026-02-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+CPS2015<-read_excel("CPS2015.xlsx")
+```
+Part A: Run a regression on AHE on age, sex and education
+```{r}
+model_1<-lm(ahe~age+female+bachelor, data=CPS2015)
+summary(model_1)
+```
+Part B: Run a regression of log on AHE, Age, Female and Bachelor
+```{r}
+model_2<-lm(log(ahe)~age+female+bachelor,data=CPS2015)
+summary(model_2)
+```
+Part C: Run a regression of ln(AHE),ln(Age), female,bachelor
+```{r}
+model_3<-lm(log(ahe)~log(age)+female+bachelor,data=CPS2015)
+summary(model_3)
+```
+Part D: Run a regression of ln(ahe), age, age^2, female, bachelor
+```{r}
+model_4<-lm(log(ahe)~age+I(age^2)+female+bachelor, data=CPS2015)
+summary(model_4)
+```
+#Part H: Plot the linear regression relation
+
+#```{r}
+#LinearLogModel<-lm(age~log(ahe),data=CPS2015)
+#plot(age~ln(ahe))
+#```
+#Part I:

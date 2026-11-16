@@ -1,0 +1,102 @@
+---
+title: "Lab7"
+output: html_document
+date: "2026-02-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE)
+library(readxl)
+CPS2015<-read_excel("CPS2015.xlsx")
+CPS96_15<-read_excel("CPS96_15.xlsx")
+birthweight_smoking<-read_excel("birthweight_smoking.xlsx")
+```
+Exercise 9.1:
+
+Part A:
+The CPS_2015 data is internally valid if the statistical inferences about causal effects are valid for the population being studied.
+
+Threats to take into consideration:
+
+1) Omitted variables: It is possible for there to be an omitted variable bias in the case where a variable that has an effect on ln(AHE) and is correlated with a variable included in the regression is omitted.Some of these variables would be occupation, ability and age.This is because higher ability workers are more likely to go to college and pursue high-earning occupations.Excluding these variables may lead to omitted variable bias,particularly for the effect of education on earnings.Occupation choice could be correlated to both gender and age, which means leaving this variable out too could lead to bias.
+
+
+2) Misspecification of the functional form: When tracing back to the findings in 8.1, we had found a non-linear effect of age on earnings, and concluded this finding through the polynomial regression between the interaction terms. 
+
+3) Errors-in-variables: The regression includes age as a dummy variable for experience.As people gain more experience, they are more productive, and are expected to earn more.However,age is an imperfect measure of experience.There is also potential of a measurement error in ahe as 
+the data is collected by a retrospective survey where workers are asked about their earnings from the previous year.
+
+4) Sample selection: Since the data only consists of a sample of full-time workers, there may be sample selection bias, which could be a threat in ensuring internal validity. 
+
+5) Simultaneous causality: ahe does not have a significant effect on age, although there could be issues when it comes to gender. However, it is contextual,and there is not enough evidence with the current data to conclude that simultaneous causality out of this form of bias exists.
+
+6) Inconsistency of OLS standard errors:Heteroskedasticity is not a concern because heteroskedastic robust standard errors were used in this analysis. The data has been collected,using i.i.d. sampling, so that correlation across the errors does not become a threat. 
+
+Part B:
+a)
+
+I) Running the regression for 1996
+```{r}
+model_1996<-lm(log(ahe)~age+female+bachelor,data=subset(CPS96_15, year==1996))
+summary(model_1996)
+```
+II) Running the regression for 2015
+```{r}
+model_2015<-lm(log(ahe)~age+female+bachelor, data=subset(CPS96_15,year==2015))
+summary(model_2015)
+```
+Comparing the regressions for 1996 and 2015, the coefficient on Female changed from −0.195 to −0.178, indicating that the gender wage gap decreased slightly over time. The return to a bachelor’s degree increased from 0.377 to 0.462, suggesting that the economic value of higher education rose between 1996 and 2015. The age coefficient remained stable across both years.
+
+Because the signs and statistical significance of the coefficients remain consistent across time, we can qualitatively conclude that the data exhibit temporal external validity. However, the changes in the increase in the return to education, which suggests some evolution in labor market structure, indicates limited quantitative external validity.
+
+Exercise 9.2:
+```{r}
+# Baseline model
+model <- lm(birthweight ~ smoker + age + educ + nprevist,
+            data = birthweight_smoking)
+summary(model)
+confint(model, "smoker", level = 0.95)
+
+# Quadratic in age
+birthweight_smoking$age2 <- birthweight_smoking$age^2
+
+quad_model<-lm(birthweight~smoker+age+age2+educ+nprevist,data=birthweight_smoking)
+summary(quad_model)
+confint(quad_model,"smoker",level = 0.95)
+
+# Log birthweight model
+log_model<-lm(log(birthweight)~smoker+age+educ+nprevist,data=birthweight_smoking)
+summary(log_model)
+confint(log_model, "smoker", level = 0.95)
+
+# Add prenatal timing controls
+trimester_model <- lm(birthweight~smoker+age+educ+tripre1 + tripre2+tripre3,data = birthweight_smoking)
+summary(trimester_model)
+confint(trimester_model,"smoker",level=0.95)
+```
+Because smoking is measured as a binary variable, nonlinearities were introduced in continuous controls such as age. A quadratic in age and additional prenatal timing controls were included. The estimated smoking coefficient remained close to −200 grams across specifications, and the 95% confidence interval remained approximately between −260 and −155 grams. Thus, the smoking effect is robust to reasonable nonlinear functional forms.
+
+ii) The birthweight_smoking data is internally valid if the statistical inferences about causal effects are valid for the population being studied.
+
+Threats to internal validity:
+
+1) Omitted variable bias:Smoking is likely correlated with income, nutrition,stress, drug/alcohol use,access to healthcare and environmental exposure. If these affect birthweight and are omitted,the smoking coefficient will be biased.
+
+2) Misspecification of the Functional form:If the effect of age is nonlinear,prenatal visits have diminishing returns and smoking effects vary by intensity, the linear model may misrepresent a true relationship.
+
+3) Sampling Selection:The dataset only includes babies alive in Pennsylvania in 1989.If smoking increases the risk of miscarriage, there may exist selection bias where the worst outcomes may not exist in the data.
+
+4) Errors in variables:If mothers misreport their smoking habits, there may be an error in variables.
+
+5) Simultaneous causality:While birthweight does not cause smoking,mothers may reduce smoking during a pregancy if they faced complications, which makes the variable endogenous.
+
+6) Heteroskedasticity:Variance of birthweight will differ by age,income and health status. If heteroskedasticity exists and we use non-standard errors, we may get the wrong CI. We must use the robust SE to avoid this threat.
+
+b)
+The birthweight_Smoking dataset includes births in Pennsylvania in 1989.
+
+i) For California in 1989:External validity was moderate. Although the time period is the same, California differs demographically from Pennsylvania in terms of racial composition, income distribution, and healthcare access. These differences may affect the magnitude of the smoking effect, though the direction is likely similar.
+
+ii) For Illinois in 2019:External validity is weaker due to changes over time. Advances in prenatal care, anti-smoking policies, cigarette composition, and public health awareness may alter the magnitude of the effect. Additionally, smoking prevalence and maternal characteristics may differ substantially from 1989.
+
+iii) For South Korea in 2019:External validity is weakest. Differences in healthcare systems, cultural norms, smoking prevalence, environmental exposure, and maternal characteristics make it unlikely that the magnitude of the effect would be identical. However, the biological mechanism linking smoking and birthweight remains similar.
